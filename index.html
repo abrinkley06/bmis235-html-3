@@ -36,7 +36,194 @@
      This box is empty on purpose. In Part 7 you paste an interactive
      graphic BETWEEN the opening <div> and the closing </div> below.
      ===================================================================== -->
-<div class="showcase"></div>
+<div class="showcase">
+  <!-- HTML: the stage where the names bounce, plus the box that shows a fun fact -->
+<div class="pet-stage" aria-label="Bouncing pet names"></div>
+<div class="pet-fact" aria-live="polite">Tap a name to meet them!</div>
+
+<!-- CSS: brand colors (#ede861 and #2b2b2b), Calibri font, and layout. Every rule starts with .showcase -->
+<style>
+.showcase {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: 400px;
+  overflow: hidden;
+  background: #ede861;
+  color: #2b2b2b;
+  font-family: Calibri, "Carlito", "Segoe UI", sans-serif;
+  border-radius: 16px;
+}
+.showcase *,
+.showcase *::before,
+.showcase *::after {
+  box-sizing: border-box;
+}
+.showcase .pet-stage {
+  position: relative;
+  width: 100%;
+  height: 316px;
+  overflow: hidden;
+}
+.showcase .pet-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 10px 22px;
+  border: 3px solid #2b2b2b;
+  border-radius: 999px;
+  background: #2b2b2b;
+  color: #ede861;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+.showcase .pet-name:hover,
+.showcase .pet-name:focus-visible {
+  background: #ede861;
+  color: #2b2b2b;
+  outline: none;
+}
+.showcase .pet-name.pet-active {
+  background: #ede861;
+  color: #2b2b2b;
+}
+.showcase .pet-fact {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: #2b2b2b;
+  color: #ede861;
+  font-size: 19px;
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+}
+@media (max-width: 480px) {
+  .showcase { height: 380px; }
+  .showcase .pet-stage { height: 298px; }
+  .showcase .pet-name { font-size: 22px; padding: 8px 16px; }
+  .showcase .pet-fact { font-size: 16px; }
+}
+</style>
+
+<!-- JavaScript: makes the names bounce off the edges, pauses them on hover, and shows a fun fact when one is clicked -->
+<script>
+(function () {
+  var root = document.querySelector('.showcase');
+  if (!root) return;
+  var stage = root.querySelector('.pet-stage');
+  var card = root.querySelector('.pet-fact');
+  if (!stage || !card) return;
+
+  var pets = [
+    { name: 'Birdie', fact: 'Birdie likes plastic!' },
+    { name: 'Callie', fact: 'Callie loves looking out the window.' },
+    { name: 'Dottie', fact: "Dottie is named after Pee-wee Herman's girlfriend." }
+  ];
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var paused = false;
+  var items = [];
+
+  pets.forEach(function (pet, i) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pet-name';
+    btn.textContent = pet.name;
+    stage.appendChild(btn);
+
+    var angle = (Math.random() * 0.8 + 0.2) + i * 2.1;
+    var speed = 55 + Math.random() * 25;
+    var item = {
+      el: btn,
+      x: 20 + i * 70,
+      y: 20 + i * 60,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      w: 0,
+      h: 0
+    };
+    items.push(item);
+
+    btn.addEventListener('click', function () {
+      items.forEach(function (it) { it.el.classList.remove('pet-active'); });
+      btn.classList.add('pet-active');
+      card.textContent = pet.fact;
+    });
+  });
+
+  function measure() {
+    items.forEach(function (it) {
+      it.w = it.el.offsetWidth;
+      it.h = it.el.offsetHeight;
+    });
+  }
+
+  function place(it) {
+    it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px)';
+  }
+
+  function layoutStatic() {
+    var W = stage.clientWidth, H = stage.clientHeight;
+    items.forEach(function (it, i) {
+      it.x = Math.max(0, Math.min(W - it.w, (W - it.w) / 2));
+      it.y = Math.max(0, Math.min(H - it.h, 20 + i * (it.h + 16)));
+      place(it);
+    });
+  }
+
+  stage.addEventListener('mouseenter', function () { paused = true; });
+  stage.addEventListener('mouseleave', function () { paused = false; });
+
+  var last = null;
+  function frame(t) {
+    if (last === null) last = t;
+    var dt = Math.min((t - last) / 1000, 0.05);
+    last = t;
+    if (!paused) {
+      var W = stage.clientWidth, H = stage.clientHeight;
+      items.forEach(function (it) {
+        it.x += it.vx * dt;
+        it.y += it.vy * dt;
+        var maxX = Math.max(0, W - it.w), maxY = Math.max(0, H - it.h);
+        if (it.x < 0) { it.x = 0; it.vx = Math.abs(it.vx); }
+        if (it.x > maxX) { it.x = maxX; it.vx = -Math.abs(it.vx); }
+        if (it.y < 0) { it.y = 0; it.vy = Math.abs(it.vy); }
+        if (it.y > maxY) { it.y = maxY; it.vy = -Math.abs(it.vy); }
+        place(it);
+      });
+    }
+    requestAnimationFrame(frame);
+  }
+
+  measure();
+  window.addEventListener('resize', measure);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+
+  if (reduceMotion) {
+    layoutStatic();
+    window.addEventListener('resize', layoutStatic);
+  } else {
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
+</div>
 
 <!-- Footer: fill in your name -->
 <footer>Built by YOUR NAME &middot; BMIS 235</footer>
